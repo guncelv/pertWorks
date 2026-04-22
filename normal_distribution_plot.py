@@ -26,7 +26,6 @@ class VerticalLine:
     """A vertical line to draw on top of the distribution."""
 
     x: float
-    label: str | None = None
     color: str = "black"
     linestyle: str = "--"
     linewidth: float = 1.5
@@ -38,18 +37,14 @@ class HatchedRegion:
     """A shaded/hatched area under the curve between two x-values.
 
     Either bound may be ``None`` / ``+-inf`` to hatch an open tail.
-    The probability mass of the region is computed automatically and can be
-    shown in the legend via ``show_probability=True``.
     """
 
     lower: float | None = None
     upper: float | None = None
-    label: str | None = None
     hatch: str = "///"
     edgecolor: str = "C0"
     facecolor: str = "none"
     alpha: float = 0.6
-    show_probability: bool = True
 
 
 class NormalDistributionPlot:
@@ -94,7 +89,6 @@ class NormalDistributionPlot:
     def add_vertical_line(
         self,
         x: float,
-        label: str | None = None,
         color: str = "black",
         linestyle: str = "--",
         linewidth: float = 1.5,
@@ -104,7 +98,6 @@ class NormalDistributionPlot:
         self._vlines.append(
             VerticalLine(
                 x=float(x),
-                label=label,
                 color=color,
                 linestyle=linestyle,
                 linewidth=linewidth,
@@ -117,12 +110,10 @@ class NormalDistributionPlot:
         self,
         lower: float | None = None,
         upper: float | None = None,
-        label: str | None = None,
         hatch: str = "///",
         edgecolor: str = "C0",
         facecolor: str = "none",
         alpha: float = 0.6,
-        show_probability: bool = True,
     ) -> "NormalDistributionPlot":
         """Shade the area under the curve between ``lower`` and ``upper``.
 
@@ -133,12 +124,10 @@ class NormalDistributionPlot:
             HatchedRegion(
                 lower=lower,
                 upper=upper,
-                label=label,
                 hatch=hatch,
                 edgecolor=edgecolor,
                 facecolor=facecolor,
                 alpha=alpha,
-                show_probability=show_probability,
             )
         )
         return self
@@ -205,26 +194,18 @@ class NormalDistributionPlot:
     def _pdf(self, x: np.ndarray) -> np.ndarray:
         return norm.pdf(x, loc=self.mean, scale=self.std)
 
-    def _probability(self, lower: float | None, upper: float | None) -> float:
-        lo = -np.inf if lower is None else lower
-        hi = np.inf if upper is None else upper
-        return float(
-            norm.cdf(hi, loc=self.mean, scale=self.std)
-            - norm.cdf(lo, loc=self.mean, scale=self.std)
-        )
-
     def plot(
         self,
         ax: plt.Axes | None = None,
-        title: str | None = None,
-        xlabel: str = "x",
-        ylabel: str = "Probability density",
         curve_color: str = "C0",
         curve_linewidth: float = 2.0,
-        show_legend: bool = True,
-        grid: bool = True,
     ) -> plt.Axes:
-        """Render the distribution and return the matplotlib ``Axes``."""
+        """Render the distribution and return the matplotlib ``Axes``.
+
+        The output deliberately contains only: the bell curve, any hatched
+        regions, any vertical lines, and the horizontal-axis tick markers.
+        No title, axis labels, legend, grid, or y-axis are drawn.
+        """
         if ax is None:
             _, ax = plt.subplots(figsize=(9, 5))
 
@@ -232,7 +213,7 @@ class NormalDistributionPlot:
         x = np.linspace(xmin, xmax, self.num_points)
         y = self._pdf(x)
 
-        ax.plot(x, y, color=curve_color, linewidth=curve_linewidth, label="N(μ, σ²)")
+        ax.plot(x, y, color=curve_color, linewidth=curve_linewidth)
 
         for region in self._regions:
             lo = xmin if region.lower is None else max(region.lower, xmin)
@@ -242,11 +223,6 @@ class NormalDistributionPlot:
             mask = (x >= lo) & (x <= hi)
             xr = x[mask]
             yr = y[mask]
-            prob = self._probability(region.lower, region.upper)
-            label = region.label
-            if region.show_probability:
-                prob_str = f"P = {prob:.4f}"
-                label = f"{label} ({prob_str})" if label else prob_str
             ax.fill_between(
                 xr,
                 0,
@@ -256,7 +232,6 @@ class NormalDistributionPlot:
                 hatch=region.hatch,
                 alpha=region.alpha,
                 linewidth=0.0,
-                label=label,
             )
 
         for vline in self._vlines:
@@ -266,7 +241,6 @@ class NormalDistributionPlot:
                 linestyle=vline.linestyle,
                 linewidth=vline.linewidth,
                 alpha=vline.alpha,
-                label=vline.label,
             )
 
         if self._xtick_positions is not None:
@@ -276,15 +250,19 @@ class NormalDistributionPlot:
 
         ax.set_xlim(xmin, xmax)
         ax.set_ylim(bottom=0)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-        if title is None:
-            title = f"Normal distribution (μ={self.mean:g}, σ={self.std:g})"
-        ax.set_title(title)
-        if grid:
-            ax.grid(True, linestyle=":", alpha=0.5)
-        if show_legend:
-            ax.legend(loc="best", framealpha=0.9)
+
+        ax.set_title("")
+        ax.set_xlabel("")
+        ax.set_ylabel("")
+
+        ax.tick_params(axis="y", which="both", left=False, right=False, labelleft=False)
+        ax.set_yticks([])
+
+        for spine_name in ("top", "right", "left"):
+            ax.spines[spine_name].set_visible(False)
+
+        ax.grid(False)
+
         return ax
 
 
@@ -294,43 +272,32 @@ def _demo() -> None:
 
     p1 = NormalDistributionPlot(mean=0, std=1)
     p1.set_xticks_by_sigma(as_sigma_labels=True)
-    p1.add_vertical_line(0, label="mean (μ)", color="black")
-    p1.add_hatched_region(
-        lower=-1, upper=1, label="within 1σ", hatch="///", edgecolor="C1"
-    )
-    p1.plot(ax=axes[0, 0], title="Standard normal with σ-labels")
+    p1.add_vertical_line(0, color="black")
+    p1.add_hatched_region(lower=-1, upper=1, hatch="///", edgecolor="C1")
+    p1.plot(ax=axes[0, 0])
 
     p2 = NormalDistributionPlot(mean=100, std=15, x_range=(40, 160))
     p2.set_xticks([55, 70, 85, 100, 115, 130, 145])
-    p2.add_vertical_line(130, label="IQ = 130 (gifted cutoff)", color="crimson")
-    p2.add_hatched_region(
-        lower=130, upper=None, label="IQ ≥ 130", hatch="\\\\\\", edgecolor="crimson"
-    )
-    p2.add_hatched_region(
-        lower=85, upper=115, label="average range", hatch="...", edgecolor="C2"
-    )
-    p2.plot(ax=axes[0, 1], title="IQ scores (μ=100, σ=15)", xlabel="IQ score")
+    p2.add_vertical_line(130, color="crimson")
+    p2.add_hatched_region(lower=130, upper=None, hatch="\\\\\\", edgecolor="crimson")
+    p2.add_hatched_region(lower=85, upper=115, hatch="...", edgecolor="C2")
+    p2.plot(ax=axes[0, 1])
 
     p3 = NormalDistributionPlot(mean=0, std=1)
-    p3.set_xticks_by_mapping(
-        [-2, -1, 0, 1, 2],
-        lambda z: f"z={z:+g}\nCDF={norm.cdf(z):.3f}",
-    )
-    p3.add_vertical_line(1.96, label="z = 1.96", color="purple")
+    p3.set_xticks([-2, -1, 0, 1, 2])
+    p3.add_vertical_line(1.96, color="purple")
     p3.add_vertical_line(-1.96, color="purple", linestyle=":")
-    p3.add_hatched_region(
-        lower=-1.96, upper=1.96, label="95% CI", hatch="xx", edgecolor="purple"
-    )
-    p3.plot(ax=axes[1, 0], title="Custom tick labels via a mapping function")
+    p3.add_hatched_region(lower=-1.96, upper=1.96, hatch="xx", edgecolor="purple")
+    p3.plot(ax=axes[1, 0])
 
     p4 = NormalDistributionPlot(mean=50, std=8, x_range=(20, 80))
     p4.set_xticks([26, 34, 42, 50, 58, 66, 74])
-    p4.add_vertical_line(42, label="lower bound", color="darkorange")
-    p4.add_vertical_line(66, label="upper bound", color="darkorange")
-    p4.add_hatched_region(lower=None, upper=42, label="left tail", hatch="//", edgecolor="gray")
-    p4.add_hatched_region(lower=66, upper=None, label="right tail", hatch="\\\\", edgecolor="gray")
-    p4.add_hatched_region(lower=42, upper=66, label="central", hatch="++", edgecolor="C0")
-    p4.plot(ax=axes[1, 1], title="Tails and central mass with probabilities")
+    p4.add_vertical_line(42, color="darkorange")
+    p4.add_vertical_line(66, color="darkorange")
+    p4.add_hatched_region(lower=None, upper=42, hatch="//", edgecolor="gray")
+    p4.add_hatched_region(lower=66, upper=None, hatch="\\\\", edgecolor="gray")
+    p4.add_hatched_region(lower=42, upper=66, hatch="++", edgecolor="C0")
+    p4.plot(ax=axes[1, 1])
 
     fig.tight_layout()
     plt.show()
