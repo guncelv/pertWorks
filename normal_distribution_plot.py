@@ -153,12 +153,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Transparency for hatched probability areas.",
     )
     parser.add_argument(
-        "--title",
-        type=str,
-        default="Normal Distribution",
-        help="Chart title.",
-    )
-    parser.add_argument(
         "--output",
         type=str,
         default="normal_distribution.png",
@@ -187,7 +181,7 @@ def main() -> None:
     y = normal_pdf(x, mean=args.mean, std=args.std)
 
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(x, y, color="tab:blue", linewidth=2.0, label="Normal PDF")
+    ax.plot(x, y, color="tab:blue", linewidth=2.0)
 
     if args.x_values:
         ax.set_xticks(args.x_values)
@@ -198,7 +192,6 @@ def main() -> None:
             line_kwargs["color"] = line.color
         ax.axvline(
             line.value,
-            label=line.label if line.label else f"x = {line.value:g}",
             **line_kwargs,
         )
 
@@ -206,11 +199,6 @@ def main() -> None:
         mask = (x >= region.left) & (x <= region.right)
         probability = normal_cdf(region.right, args.mean, args.std) - normal_cdf(
             region.left, args.mean, args.std
-        )
-        label = (
-            region.label
-            if region.label
-            else f"P({region.left:g} <= X <= {region.right:g}) = {probability:.4f}"
         )
         ax.fill_between(
             x[mask],
@@ -220,18 +208,14 @@ def main() -> None:
             edgecolor=args.hatch_color,
             alpha=args.hatch_alpha,
             hatch=args.hatch_pattern,
-            label=label,
         )
 
-    ax.set_title(args.title)
-    ax.set_xlabel("X")
-    ax.set_ylabel("Density")
     ax.set_xlim(args.x_min, args.x_max)
-    ax.grid(alpha=0.25)
-
-    handles, labels = ax.get_legend_handles_labels()
-    if handles:
-        ax.legend(loc="best")
+    ax.set_yticks([])
+    ax.tick_params(axis="y", left=False, labelleft=False)
+    ax.spines["left"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
 
     fig.tight_layout()
     fig.savefig(args.output, dpi=200)
