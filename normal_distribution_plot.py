@@ -199,12 +199,21 @@ class NormalDistributionPlot:
         ax: plt.Axes | None = None,
         curve_color: str = "C0",
         curve_linewidth: float = 2.0,
+        fontsize: float | str | None = None,
     ) -> plt.Axes:
         """Render the distribution and return the matplotlib ``Axes``.
 
         The output deliberately contains only: the bell curve, any hatched
         regions, any vertical lines, and the horizontal-axis tick markers.
         No title, axis labels, legend, grid, or y-axis are drawn.
+
+        Parameters
+        ----------
+        fontsize:
+            Font size applied to every textual element of the subplot (the
+            horizontal-axis tick labels — the only text the chart draws).
+            Accepts any value matplotlib understands, e.g. ``12``, ``"small"``,
+            ``"large"``. ``None`` leaves matplotlib's default in place.
         """
         if ax is None:
             _, ax = plt.subplots(figsize=(9, 5))
@@ -263,6 +272,15 @@ class NormalDistributionPlot:
 
         ax.grid(False)
 
+        if fontsize is not None:
+            ax.tick_params(axis="x", labelsize=fontsize)
+            for text in (
+                [ax.title, ax.xaxis.label, ax.yaxis.label]
+                + list(ax.get_xticklabels())
+                + list(ax.get_yticklabels())
+            ):
+                text.set_fontsize(fontsize)
+
         return ax
 
 
@@ -270,25 +288,27 @@ def _demo() -> None:
     """Render a small gallery showing the main features."""
     fig, axes = plt.subplots(2, 2, figsize=(14, 9))
 
+    shared_fontsize = 14
+
     p1 = NormalDistributionPlot(mean=0, std=1)
     p1.set_xticks_by_sigma(as_sigma_labels=True)
     p1.add_vertical_line(0, color="black")
     p1.add_hatched_region(lower=-1, upper=1, hatch="///", edgecolor="C1")
-    p1.plot(ax=axes[0, 0])
+    p1.plot(ax=axes[0, 0], fontsize=shared_fontsize)
 
     p2 = NormalDistributionPlot(mean=100, std=15, x_range=(40, 160))
     p2.set_xticks([55, 70, 85, 100, 115, 130, 145])
     p2.add_vertical_line(130, color="crimson")
     p2.add_hatched_region(lower=130, upper=None, hatch="\\\\\\", edgecolor="crimson")
     p2.add_hatched_region(lower=85, upper=115, hatch="...", edgecolor="C2")
-    p2.plot(ax=axes[0, 1])
+    p2.plot(ax=axes[0, 1], fontsize=shared_fontsize)
 
     p3 = NormalDistributionPlot(mean=0, std=1)
     p3.set_xticks([-2, -1, 0, 1, 2])
     p3.add_vertical_line(1.96, color="purple")
     p3.add_vertical_line(-1.96, color="purple", linestyle=":")
     p3.add_hatched_region(lower=-1.96, upper=1.96, hatch="xx", edgecolor="purple")
-    p3.plot(ax=axes[1, 0])
+    p3.plot(ax=axes[1, 0], fontsize=shared_fontsize)
 
     p4 = NormalDistributionPlot(mean=50, std=8, x_range=(20, 80))
     p4.set_xticks([26, 34, 42, 50, 58, 66, 74])
@@ -297,7 +317,7 @@ def _demo() -> None:
     p4.add_hatched_region(lower=None, upper=42, hatch="//", edgecolor="gray")
     p4.add_hatched_region(lower=66, upper=None, hatch="\\\\", edgecolor="gray")
     p4.add_hatched_region(lower=42, upper=66, hatch="++", edgecolor="C0")
-    p4.plot(ax=axes[1, 1])
+    p4.plot(ax=axes[1, 1], fontsize=shared_fontsize)
 
     fig.tight_layout()
     plt.show()

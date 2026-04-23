@@ -87,8 +87,20 @@ plot.set_xticks_by_mapping([-2, -1, 0, 1, 2],
 ### Rendering
 
 ```python
-plot.plot(ax=None, curve_color="C0", curve_linewidth=2.0)
+plot.plot(ax=None, curve_color="C0", curve_linewidth=2.0, fontsize=None)
 ```
+
+- `fontsize` sets the font size for every textual element of the subplot
+  (currently the horizontal-axis tick labels — the only text the chart
+  draws). Accepts any value matplotlib understands, e.g. `12`, `"small"`,
+  `"large"`. Use it consistently across every subplot to produce a
+  visually uniform figure:
+
+  ```python
+  shared_fontsize = 14
+  plot1.plot(ax=axes[0, 0], fontsize=shared_fontsize)
+  plot2.plot(ax=axes[0, 1], fontsize=shared_fontsize)
+  ```
 
 Returns the `matplotlib.axes.Axes` so you can tweak it further if you
 really want to — by default the plot shows only the curve, hatched
